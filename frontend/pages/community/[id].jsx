@@ -12,7 +12,6 @@ export default function ThreadDetail() {
 
   const [thread, setThread] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const [reply, setReply] = useState({ author: '', content: '', hp: '' });
 
   const load = async () => {
@@ -20,14 +19,11 @@ export default function ThreadDetail() {
     const data = await apiGet(`/threads/${id}`);
     setThread(data);
   };
-
   useEffect(() => { load(); }, [id]);
 
-  // realtime replies
   useEffect(() => {
     if (!id) return;
-    let s;
-    let mounted = true;
+    let s; let mounted = true;
     (async () => {
       s = await ensureConnected();
       if (!s || !mounted) return;
@@ -38,7 +34,6 @@ export default function ThreadDetail() {
     return () => { mounted = false; if (s) { s.emit('leave:thread', id); s.off('reply:new'); s.off('reply:deleted'); } };
   }, [id]);
 
-  // ===== Users for suggestions =====
   const usersInThread = useMemo(() => {
     if (!thread) return [];
     const set = new Set();
@@ -50,16 +45,9 @@ export default function ThreadDetail() {
     return Array.from(set).sort((a,b)=>a.localeCompare(b));
   }, [thread]);
 
-  // ===== Utils for mentions =====
   const mergeUniqueCI = (arrs) => {
-    const seen = new Set();
-    const out = [];
-    for (const arr of arrs) {
-      for (const x of (arr || [])) {
-        const k = String(x).toLowerCase();
-        if (!seen.has(k)) { seen.add(k); out.push(String(x)); }
-      }
-    }
+    const seen = new Set(); const out = [];
+    for (const arr of arrs) for (const x of (arr || [])) { const k = String(x).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(String(x)); } }
     return out;
   };
   const filterLocalUsers = (q) => {
@@ -68,19 +56,11 @@ export default function ThreadDetail() {
     const contains = usersInThread.filter(u => u.toLowerCase().includes(ql) && !starts.includes(u));
     return [...starts, ...contains];
   };
-
   const mentionCache = useRef(new Map());
   const fetchMentionCandidates = async (q) => {
     const key = q.toLowerCase();
     if (mentionCache.current.has(key)) return mentionCache.current.get(key);
-
-    const endpoints = [
-      ['/users/search', 'q'],
-      ['/users', 'q'],
-      ['/users', 'query'],
-      ['/user/search', 'q'],
-    ];
-
+    const endpoints = [['/users/search','q'], ['/users','q'], ['/users','query'], ['/user/search','q']];
     let collected = [];
     for (const [ep, param] of endpoints) {
       try {
@@ -95,7 +75,6 @@ export default function ThreadDetail() {
     return unique;
   };
 
-  // ===== Build reply tree =====
   const buildReplyTree = (list) => {
     const replies = (list || []).map(r => ({ ...r, children: [] }));
     const byId = new Map(replies.map(n => [String(n._id || n.id), n]));
@@ -110,7 +89,6 @@ export default function ThreadDetail() {
     return roots;
   };
 
-  // ===== Focus + highlight theo anchor từ notifications =====
   const commentRefs = useRef({});
   const [flashId, setFlashId] = useState(null);
   const focusAndFlash = (focusId) => {
@@ -141,7 +119,6 @@ export default function ThreadDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread, router.query?.focus]);
 
-  // ===== Inline reply editor (tách riêng để tránh re-mount) =====
   function InlineReplyEditor({ rid, defaultPrefix = '', onCancel, onSubmit }) {
     const [value, setValue] = useState(defaultPrefix);
     const [open, setOpen] = useState(false);
@@ -152,32 +129,18 @@ export default function ThreadDetail() {
     const taRef = useRef(null);
     const caretRef = useRef(null);
     const debounceRef = useRef(null);
-    const suggestBoxRef = useRef(null);
 
-    // ⭐ Giữ caret/focus bền vững sau mỗi render (tránh văng focus khi state đổi)
     useLayoutEffect(() => {
       const el = taRef.current;
       if (!el) return;
-      if (document.activeElement !== el) {
-        // nếu bị blur vì render, focus lại
-        el.focus();
-      }
-      if (caretRef.current != null) {
-        try { el.setSelectionRange(caretRef.current, caretRef.current); } catch {}
-        caretRef.current = null;
-      }
+      if (document.activeElement !== el) el.focus();
+      if (caretRef.current != null) { try { el.setSelectionRange(caretRef.current, caretRef.current); } catch {} caretRef.current = null; }
     });
 
-    // Nếu blur mà không phải do click vào nút/link trong editor -> focus lại
     const onBlur = (e) => {
       const rt = e.relatedTarget;
-      if (rt && (rt.closest && (rt.closest('button') || rt.closest('a') || rt.closest('input')))) {
-        return; // blur hợp lệ (nhấn nút, link...)
-      }
-      // Blur không mong muốn → focus lại
-      requestAnimationFrame(() => {
-        if (taRef.current) taRef.current.focus();
-      });
+      if (rt && (rt.closest && (rt.closest('button') || rt.closest('a') || rt.closest('input')))) return;
+      requestAnimationFrame(() => { taRef.current?.focus(); });
     };
 
     const updateSuggestions = (q, caret) => {
@@ -191,7 +154,7 @@ export default function ThreadDetail() {
         setOptions(merged);
         setActiveIdx(merged.length ? 0 : -1);
         setOpen(true);
-        caretRef.current = caret; // giữ vị trí caret cho lần render kế
+        caretRef.current = caret;
       }, 120);
     };
 
@@ -211,10 +174,7 @@ export default function ThreadDetail() {
     };
 
     return (
-      <form
-        className="mt-3 space-y-2"
-        onSubmit={(e) => { e.preventDefault(); onSubmit(value); }}
-      >
+      <form className="mt-3 space-y-2" onSubmit={(e) => { e.preventDefault(); onSubmit(value); }}>
         <div className="relative">
           <textarea
             ref={taRef}
@@ -223,25 +183,18 @@ export default function ThreadDetail() {
             value={value}
             onBlur={onBlur}
             onChange={(e) => {
-              const el = e.target;
-              const caret = el.selectionStart;
-              const v = el.value;
+              const el = e.target; const caret = el.selectionStart; const v = el.value;
               setValue(v);
-
-              if (composing) return; // đang gõ dấu → đợi end
-
+              if (composing) return;
               const head = v.slice(0, caret);
               const m = /@([a-zA-Z0-9_]{1,30})$/.exec(head);
-              if (m && m[1]) updateSuggestions(m[1], caret);
-              else { setOpen(false); setOptions([]); }
+              if (m && m[1]) updateSuggestions(m[1], caret); else { setOpen(false); setOptions([]); }
               caretRef.current = caret;
             }}
             onCompositionStart={() => setComposing(true)}
             onCompositionEnd={(e) => {
               setComposing(false);
-              const el = e.target;
-              const caret = el.selectionStart;
-              const v = el.value;
+              const el = e.target; const caret = el.selectionStart; const v = el.value;
               const head = v.slice(0, caret);
               const m = /@([a-zA-Z0-9_]{1,30})$/.exec(head);
               if (m && m[1]) updateSuggestions(m[1], caret);
@@ -249,31 +202,15 @@ export default function ThreadDetail() {
             }}
             onKeyDown={(e) => {
               if (composing) return;
-
               if (open && options.length) {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setActiveIdx((i) => (i + 1) % options.length);
-                  return;
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setActiveIdx((i) => (i - 1 + options.length) % options.length);
-                  return;
-                }
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  insertMention(options[activeIdx >= 0 ? activeIdx : 0]);
-                  return;
-                }
-                if (e.key === 'Escape') {
-                  setOpen(false); return;
-                }
+                if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => (i + 1) % options.length); return; }
+                if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIdx((i) => (i - 1 + options.length) % options.length); return; }
+                if (e.key === 'Enter')     { e.preventDefault(); insertMention(options[activeIdx >= 0 ? activeIdx : 0]); return; }
+                if (e.key === 'Escape')    { setOpen(false); return; }
               }
             }}
             required
           />
-          {/* Nút mở gợi ý thủ công */}
           <button
             type="button"
             onClick={() => {
@@ -281,19 +218,13 @@ export default function ThreadDetail() {
               setOptions(usersInThread);
               setActiveIdx(0);
               const el = taRef.current;
-              if (el) {
-                const caret = el.selectionStart || el.value.length;
-                caretRef.current = caret;
-                el.focus();
-              }
+              if (el) { const caret = el.selectionStart || el.value.length; caretRef.current = caret; el.focus(); }
             }}
             className="absolute right-2 top-2 rounded px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
           >@</button>
 
-          {/* Panel gợi ý – giữ focus khi click bằng onMouseDown.preventDefault */}
           {open && options.length > 0 && (
             <div
-              ref={suggestBoxRef}
               className="absolute z-10 mt-1 max-h-48 overflow-auto rounded border bg-white p-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
               onMouseDown={(e) => e.preventDefault()}
             >
@@ -301,9 +232,7 @@ export default function ThreadDetail() {
                 <button
                   key={u}
                   type="button"
-                  className={`block w-full rounded px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                    i === activeIdx ? 'bg-slate-100 dark:bg-slate-800' : ''
-                  }`}
+                  className={`block w-full rounded px-2 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${i === activeIdx ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
                   onMouseEnter={() => setActiveIdx(i)}
                   onClick={() => insertMention(u)}
                 >
@@ -314,13 +243,7 @@ export default function ThreadDetail() {
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={!value.trim() || loading}
-          >
-            {loading ? 'Đang gửi…' : 'Gửi trả lời'}
-          </button>
+          <button type="submit" className="btn-primary" disabled={!value.trim() || loading}>{loading ? 'Đang gửi…' : 'Gửi trả lời'}</button>
           <button type="button" onClick={onCancel} className="btn-ghost">Cancel</button>
         </div>
       </form>
@@ -343,17 +266,15 @@ export default function ThreadDetail() {
   };
 
   const postChildReply = async (parentId, content) => {
-    const body = (content || '').trim();
-    if (!body) return;
+    const body = (content || '').trim(); if (!body) return;
     setLoading(true);
-    try {
-      await apiPost(`/threads/${id}/replies`, { content: body, parentReplyId: parentId });
-      await load();
-    } catch (err) { alert('Lỗi: ' + err.message); }
+    try { await apiPost(`/threads/${id}/replies`, { content: body, parentReplyId: parentId }); await load(); }
+    catch (err) { alert('Lỗi: ' + err.message); }
     finally { setLoading(false); }
   };
 
   const [replyTo, setReplyTo] = useState(null);
+  const tree = buildReplyTree(thread?.replies || thread?.comments || []);
 
   const ReplyItem = ({ node }) => {
     const rid = node._id || node.id;
@@ -364,28 +285,17 @@ export default function ThreadDetail() {
       <li
         id={`c-${rid}`}
         ref={el => { if (el) commentRefs.current[String(rid)] = el; }}
-        className={`rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900 transition-shadow ${
-          String(flashId) === String(rid) ? 'ring-2 ring-amber-400 flash' : ''
-        }`}
+        className={`rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900 transition-shadow ${String(flashId) === String(rid) ? 'ring-2 ring-amber-400 flash' : ''}`}
       >
         <div className="text-xs text-slate-500 dark:text-slate-300 flex items-center justify-between">
           <span>{node.author || node.authorName || 'anonymous'} • {node.createdAt ? new Date(node.createdAt).toLocaleString() : ''}</span>
           <div className="flex items-center gap-2">
-            {user && (
-              <button
-                onClick={() => setReplyTo(rid)}
-                className="btn-ghost text-xs"
-              >Reply</button>
-            )}
+            {user && <button onClick={() => setReplyTo(rid)} className="btn-ghost text-xs">Reply</button>}
             {isAdmin && <button onClick={() => onDeleteReply(rid)} className="btn-ghost text-xs">Delete</button>}
           </div>
         </div>
 
-        {content && (
-          <div className="mt-2 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">
-            {content}
-          </div>
-        )}
+        {content && <div className="mt-2 whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">{content}</div>}
 
         {replyTo === rid && (
           <InlineReplyEditor
@@ -408,8 +318,6 @@ export default function ThreadDetail() {
       </li>
     );
   };
-
-  const tree = buildReplyTree(thread?.replies || thread?.comments || []);
 
   return (
     <>
@@ -444,7 +352,6 @@ export default function ThreadDetail() {
               {tree.length > 0 ? tree.map(n => <ReplyItem key={n._id || n.id} node={n} />) : <i className="text-slate-500 dark:text-slate-300">Chưa có trả lời.</i>}
             </ul>
 
-            {/* form trả lời top-level */}
             <div className="mt-6">
               {user ? (
                 <form className="grid gap-2" onSubmit={postTopLevel}>
@@ -469,11 +376,8 @@ export default function ThreadDetail() {
             </div>
           </div>
 
-          {/* hiệu ứng highlight khi focus vào comment */}
           <style jsx>{`
-            .flash {
-              animation: flashIn 1.8s ease-out;
-            }
+            .flash { animation: flashIn 1.8s ease-out; }
             @keyframes flashIn {
               0%   { box-shadow: 0 0 0 0 rgba(234,179,8,0.75); background: rgba(250,204,21,0.18); }
               60%  { box-shadow: 0 0 0 8px rgba(234,179,8,0.0); background: rgba(250,204,21,0.10); }

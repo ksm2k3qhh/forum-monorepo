@@ -1,29 +1,18 @@
-import { API_URL } from './api';
+// frontend/lib/socket.js — rv1
+import { io } from "socket.io-client";
 
-let socketPromise = null;
-
-export async function getSocket() {
-  if (typeof window === 'undefined') return null;
-  if (!socketPromise) {
-    socketPromise = (async () => {
-      const { io } = await import('socket.io-client');
-      const token = localStorage.getItem('token');
-      const s = io(API_URL, {
-        autoConnect: !!token,
-        auth: token ? { token } : {},
-        transports: ['websocket']
-      });
-      return s;
-    })();
-  }
-  return socketPromise;
-}
-
+let s;
 export async function ensureConnected() {
-  const s = await getSocket();
-  if (!s) return null;
-  if (!s.connected) s.connect();
-  const token = localStorage.getItem('token');
-  if (token) s.auth = { token };
-  return s;
+  if (s && s.connected) return s;
+  const URL = (process.env.NEXT_PUBLIC_SOCKET_ORIGIN || "").replace(/\/$/, "") || undefined;
+  if (!URL) return null; // rv1: nếu không cấu hình, bỏ qua realtime
+  s = io(URL, {
+    path: "/socket.io",
+    transports: ["websocket"],
+    withCredentials: true,
+  });
+  return new Promise((resolve) => {
+    if (s.connected) return resolve(s);
+    s.on("connect", () => resolve(s));
+  });
 }

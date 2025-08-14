@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const { authRequired } = require('../middleware/auth');
-const { emitToUser } = require('../realtime_ws');
+let emitToUser = () => {};
+try { ({ emitToUser } = require('../realtime_ws')); } catch {}
 
-// Lấy danh sách thông báo của user (mới nhất trước)
 router.get('/', authRequired, async (req, res) => {
   try {
     const list = await Notification
@@ -17,7 +17,6 @@ router.get('/', authRequired, async (req, res) => {
   }
 });
 
-// Đếm chưa đọc
 router.get('/unread-count', authRequired, async (req, res) => {
   try {
     const count = await Notification.countDocuments({ toUserId: req.user.id, read: false });
@@ -27,7 +26,6 @@ router.get('/unread-count', authRequired, async (req, res) => {
   }
 });
 
-// Đánh dấu đã đọc 1 cái
 router.post('/:id/read', authRequired, async (req, res) => {
   try {
     const r = await Notification.updateOne(
@@ -42,7 +40,6 @@ router.post('/:id/read', authRequired, async (req, res) => {
   }
 });
 
-// Đánh dấu đã đọc tất cả
 router.post('/read-all', authRequired, async (req, res) => {
   try {
     const r = await Notification.updateMany(
@@ -56,7 +53,6 @@ router.post('/read-all', authRequired, async (req, res) => {
   }
 });
 
-// ❗ XÓA 1 THÔNG BÁO (xoá trong DB)
 router.delete('/:id', authRequired, async (req, res) => {
   try {
     const r = await Notification.deleteOne({ _id: req.params.id, toUserId: req.user.id });
@@ -68,12 +64,10 @@ router.delete('/:id', authRequired, async (req, res) => {
   }
 });
 
-// ❗ XÓA NHIỀU (bulk) — khớp với frontend hiện tại: POST /notifications/bulk-delete { ids: [...] }
 router.post('/bulk-delete', authRequired, async (req, res) => {
   try {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter(Boolean) : [];
     if (!ids.length) return res.status(400).json({ error: 'ids required' });
-
     const r = await Notification.deleteMany({ _id: { $in: ids }, toUserId: req.user.id });
     const unread = await Notification.countDocuments({ toUserId: req.user.id, read: false });
     try { emitToUser(req.user.id, 'notifications:updated', { unread }); } catch {}
@@ -83,7 +77,6 @@ router.post('/bulk-delete', authRequired, async (req, res) => {
   }
 });
 
-// Alias tương thích: POST /notifications/delete { ids: [...] } => dùng chung bulk-delete
 router.post('/delete', authRequired, async (req, res) => {
   req.url = '/bulk-delete';
   router.handle(req, res);
