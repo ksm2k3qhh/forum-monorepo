@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition dark:border-slate-800 dark:bg-slate-900 dark:shadow-none; }
+  .btn { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98]; }
+  .btn-primary { @apply btn bg-brand text-white hover:bg-brand-600; }
+  .btn-ghost { @apply btn bg-transparent hover:bg-slate-100 text-slate-700 dark:text-slate-200 dark:hover:bg-slate-800; }
+  .input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500; }
+  .textarea { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500; }
+  .container-page { @apply container my-8; }
+}
+
+html, body { height: 100%; }
+
+@keyframes blobFloat {
+  0%   { transform: translate3d(0,0,0) scale(1); }
+  33%  { transform: translate3d(30px,-20px,0) scale(1.05); }
+  66%  { transform: translate3d(-20px,25px,0) scale(0.98); }
+  100% { transform: translate3d(0,0,0) scale(1); }
+}
+.animate-blob { animation: blobFloat 22s ease-in-out infinite; }
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob { animation: none; }
+}
+@import "./dark-text-fixes.css";

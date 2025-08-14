@@ -1,0 +1,19 @@
+# Root
+.DS_Store
+.vercel
+.env
+.env.*
+*.log
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Build caches
+**/.cache/

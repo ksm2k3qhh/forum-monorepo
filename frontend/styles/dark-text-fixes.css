@@ -1,0 +1,45 @@
+/* Dark mode text-only tweaks — KHÔNG đổi layout, KHÔNG đổi nền.
+   Chỉ nâng độ tương phản chữ cho các utility thường bị mờ trong dark mode. */
+
+/* Headings & chữ đậm */
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
+.dark .text-slate-900, .dark .text-gray-900 {
+  color: #f1f5f9 !important; /* slate-100 */
+}
+.dark .text-slate-800, .dark .text-gray-800,
+.dark .text-slate-700, .dark .text-gray-700 {
+  color: #e2e8f0 !important; /* slate-200 */
+}
+
+/* Chữ bình thường/ghi chú */
+.dark .text-slate-600, .dark .text-gray-600 {
+  color: #cbd5e1 !important; /* slate-300 */
+}
+.dark .text-slate-500, .dark .text-gray-500 {
+  color: #cbd5e1 !important; /* slate-300 (nâng từ 500 lên để dễ đọc) */
+}
+.dark .text-slate-400, .dark .text-gray-400 {
+  color: #94a3b8 !important; /* slate-400 */
+}
+
+/* Placeholder trong input/textarea (hay bị quá nhạt) */
+.dark input::placeholder,
+.dark textarea::placeholder,
+.dark .placeholder-slate-400::placeholder,
+.dark .placeholder-gray-400::placeholder {
+  color: #94a3b8 !important; /* slate-400 */
+  opacity: 0.95 !important;
+}
+
+/* Badge/nhãn nhỏ thường dùng text-xs + màu xám */
+.dark .text-xs.text-slate-500,
+.dark .text-xs.text-gray-500 {
+  color: #cbd5e1 !important; /* slate-300 */
+}
+
+/* Link có thể dùng màu mặc định + underline — KHÔNG đổi layout */
+.dark a {
+  color: #60a5fa; /* blue-400 để nổi hơn tí */
+}
+
+/* Không can thiệp nền, border, card, button... để giữ layout cũ */
